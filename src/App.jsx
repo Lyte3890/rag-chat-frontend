@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-// === КАСТОМНЕ МЕНЮ ВИБОРУ МОДЕЛІ ===
+// === КАСТОМНЕ МЕНЮ ВИБОРУ МОДЕЛІ (Чорно-білий стиль) ===
 function ModelSelect({ selectedModel, setSelectedModel }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
@@ -11,7 +11,6 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
     { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Large context' }
   ];
 
-  // Закриття меню при кліку поза ним
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -28,27 +27,28 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
     <div className="relative z-50" ref={menuRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-1.5 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-full text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#27272a] transition-all shadow-sm"
+        className="flex items-center gap-2.5 px-4 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-lg text-[13px] font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#27272a] transition-all shadow-sm"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-          <span>{currentModel?.name}</span>
-        </div>
-        <svg className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+        <span>{currentModel?.name}</span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform duration-300 ease-in-out ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
       </button>
 
       <div 
-        className={`absolute right-0 top-[calc(100%+8px)] w-56 bg-white dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 origin-top-right ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}`}
+        className={`absolute left-0 mt-2 w-56 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 origin-top-left ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}`}
       >
-        <div className="p-1.5">
+        <div className="p-1.5 space-y-0.5">
           {models.map(model => (
             <button
               key={model.id}
               onClick={() => { setSelectedModel(model.id); setIsOpen(false); }}
-              className={`w-full text-left px-3 py-2.5 rounded-xl flex flex-col transition-colors ${selectedModel === model.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-[#27272a] text-gray-700 dark:text-gray-300'}`}
+              className={`w-full text-left px-3 py-2.5 rounded-lg flex flex-col transition-colors ${
+                selectedModel === model.id 
+                  ? 'bg-gray-100 dark:bg-[#27272a] text-black dark:text-white' 
+                  : 'hover:bg-gray-50 dark:hover:bg-[#222] text-gray-600 dark:text-gray-400'
+              }`}
             >
               <span className="text-[13px] font-semibold">{model.name}</span>
-              <span className={`text-[11px] ${selectedModel === model.id ? 'text-blue-500/70 dark:text-blue-400/70' : 'text-gray-400'}`}>{model.desc}</span>
+              <span className={`text-[11px] ${selectedModel === model.id ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>{model.desc}</span>
             </button>
           ))}
         </div>
@@ -57,7 +57,7 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
   );
 }
 
-// === КОМПОНЕНТ ПОВІДОМЛЕННЯ (з ідеальною анімацією) ===
+// === КОМПОНЕНТ ПОВІДОМЛЕННЯ ===
 function ChatMessage({ msg }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(false);
@@ -104,19 +104,22 @@ function ChatMessage({ msg }) {
         {msg.sources && msg.sources.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-1">
             {msg.sources.map((src, i) => {
-              // Універсальна перевірка ключа для імені документа
-              const docName = src.document_name || src.source || src.doc || 'document.pdf';
+              // Дістаємо назву файлу, відкидаючи можливі шляхи типу /app/docs/
+              let rawDocName = src.document_name || src.source || src.doc || 'document.pdf';
+              let cleanDocName = rawDocName.split('/').pop().split('\\').pop();
+              // Кодуємо назву для URL (щоб пробіли і кирилиця працювали коректно)
+              let encodedDocName = encodeURIComponent(cleanDocName);
               
               return (
                 <a 
                   key={i} 
-                  href={`${import.meta.env.VITE_API_BASE_URL}/docs/${docName}#page=${src.page}`}
+                  href={`${import.meta.env.VITE_API_BASE_URL}/docs/${encodedDocName}#page=${src.page}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 rounded-lg text-[11px] font-mono cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors no-underline hover:-translate-y-0.5 shadow-sm hover:shadow"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 rounded-lg text-[11px] font-mono cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors no-underline shadow-sm hover:shadow"
                 >
-                  <svg className="w-3 h-3 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  <span className="truncate max-w-[150px]">{docName}</span> <span className="opacity-40">|</span> p.{src.page}
+                  <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <span className="truncate max-w-[150px]">{cleanDocName}</span> <span className="opacity-40">|</span> p.{src.page}
                 </a>
               );
             })}
@@ -306,7 +309,6 @@ const handleSend = async (e) => {
     if (e) e.preventDefault();
     if (!input.trim() && !attachedFile) return;
 
-    // Зберігаємо значення, щоб очистити UI миттєво
     const userText = input.trim();
     const fileToSend = attachedFile;
     const newMessages = [...activeSession.messages];
@@ -318,19 +320,16 @@ const handleSend = async (e) => {
       newMessages.push({ role: 'user', text: userText });
     }
 
-    // Оновлюємо UI (показуємо повідомлення користувача)
     updateActiveSessionMessages(newMessages);
     setInput('');
     setAttachedFile(null);
 
     try {
-      // 1. Формуємо пакет даних (Текст + Файл + Модель)
       const formData = new FormData();
       if (userText) formData.append('query', userText);
       if (fileToSend) formData.append('file', fileToSend);
       formData.append('model', selectedModel); // Передаємо вибрану модель
 
-      // 2. Робимо реальний запит на бекенд (звертаємось до змінної оточення)
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat`, {
         method: 'POST',
         body: formData,
@@ -340,10 +339,8 @@ const handleSend = async (e) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // 3. Отримуємо відповідь від FastAPI
       const data = await response.json();
 
-      // 4. Додаємо відповідь бота в інтерфейс
       updateActiveSessionMessages([
         ...newMessages, 
         { 
@@ -447,7 +444,7 @@ const handleSend = async (e) => {
                       }}
                       onBlur={() => saveRename(session.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="flex-1 bg-white dark:bg-[#27272a] border border-blue-500 rounded px-1 -ml-1 text-sm outline-none w-full text-gray-900 dark:text-white"
+                      className="flex-1 bg-white dark:bg-[#27272a] border border-gray-500 rounded px-1 -ml-1 text-sm outline-none w-full text-gray-900 dark:text-white"
                     />
                   ) : (
                     <span className="truncate">{session.title}</span>
