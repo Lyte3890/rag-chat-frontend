@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-// === КАСТОМНЕ МЕНЮ ВИБОРУ МОДЕЛІ (Чорно-білий стиль) ===
+// === CUSTOM MODEL SELECTION MENU ===
 function ModelSelect({ selectedModel, setSelectedModel }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
@@ -11,6 +11,7 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
     { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Large context' }
   ];
 
+  // Close menu when clicking outside the component
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -57,7 +58,7 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
   );
 }
 
-// === КОМПОНЕНТ ПОВІДОМЛЕННЯ ===
+// === CHAT MESSAGE COMPONENT ===
 function ChatMessage({ msg }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(false);
@@ -67,6 +68,7 @@ function ChatMessage({ msg }) {
   
   const textRef = useRef(null);
 
+  // Check if text exceeds height threshold to apply clamping
   useEffect(() => {
     if (textRef.current && msg.role === 'user') {
       if (textRef.current.scrollHeight > 140) {
@@ -104,10 +106,10 @@ function ChatMessage({ msg }) {
         {msg.sources && msg.sources.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-1">
             {msg.sources.map((src, i) => {
-              // Дістаємо назву файлу, відкидаючи можливі шляхи типу /app/docs/
+              // Extract filename, removing potential absolute paths
               let rawDocName = src.document_name || src.source || src.doc || 'document.pdf';
               let cleanDocName = rawDocName.split('/').pop().split('\\').pop();
-              // Кодуємо назву для URL (щоб пробіли і кирилиця працювали коректно)
+              // Encode filename for URL to properly handle spaces and Cyrillic characters
               let encodedDocName = encodeURIComponent(cleanDocName);
               
               return (
@@ -170,7 +172,7 @@ function ChatMessage({ msg }) {
   );
 }
 
-// === ОСНОВНИЙ ДОДАТОК ===
+// === MAIN APPLICATION COMPONENT ===
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const fileInputRef = useRef(null);
@@ -178,10 +180,10 @@ function App() {
   const [attachedFile, setAttachedFile] = useState(null);
   const [input, setInput] = useState('');
   
-  // Стан для вибору моделі
+  // Model selection state
   const [selectedModel, setSelectedModel] = useState('llama3-70b-8192');
   
-  // Стан для меню і перейменування
+  // Session menu and renaming state
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -252,7 +254,7 @@ function App() {
     setInput('');
   };
 
-  // ФУНКЦІЇ МЕНЮ
+  // MENU FUNCTIONS
   const togglePin = (e, id) => {
     e.stopPropagation();
     setSessions(prev => prev.map(s => s.id === id ? { ...s, isPinned: !s.isPinned } : s));
@@ -290,7 +292,7 @@ function App() {
     setEditingId(null);
   };
 
-  // Поле вводу
+  // Input handling
   const handleInput = (e) => {
     setInput(e.target.value);
     if (textareaRef.current) {
@@ -309,27 +311,31 @@ const handleSend = async (e) => {
     if (e) e.preventDefault();
     if (!input.trim() && !attachedFile) return;
 
+    // Cache values to clear UI instantly
     const userText = input.trim();
     const fileToSend = attachedFile;
     const newMessages = [...activeSession.messages];
     
     if (fileToSend) {
-      newMessages.push({ role: 'system', text: `📄 Uploading & Processing: "${fileToSend.name}"...` });
+      newMessages.push({ role: 'system', text: `[System] Uploading & Processing: "${fileToSend.name}"...` });
     }
     if (userText) {
       newMessages.push({ role: 'user', text: userText });
     }
 
+    // Update UI to show user message
     updateActiveSessionMessages(newMessages);
     setInput('');
     setAttachedFile(null);
 
     try {
+      // 1. Prepare form data payload (Text + File + Model)
       const formData = new FormData();
       if (userText) formData.append('query', userText);
       if (fileToSend) formData.append('file', fileToSend);
-      formData.append('model', selectedModel); // Передаємо вибрану модель
+      formData.append('model', selectedModel); // Append selected model
 
+      // 2. Execute backend request using environment variable
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat`, {
         method: 'POST',
         body: formData,
@@ -339,8 +345,10 @@ const handleSend = async (e) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      // 3. Parse FastAPI response
       const data = await response.json();
 
+      // 4. Append assistant response to UI
       updateActiveSessionMessages([
         ...newMessages, 
         { 
@@ -354,7 +362,7 @@ const handleSend = async (e) => {
       console.error("Fetch error:", error);
       updateActiveSessionMessages([
         ...newMessages, 
-        { role: 'system', text: `❌ Error connecting to RAG backend: ${error.message}` }
+        { role: 'system', text: `[Error] Failed connecting to RAG backend: ${error.message}` }
       ]);
     }
   };
@@ -368,7 +376,7 @@ const handleSend = async (e) => {
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex text-gray-900 dark:text-gray-100 font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-300">
       
-      {/* БІЧНА ПАНЕЛЬ */}
+      {/* SIDEBAR */}
       <div className={`${isSidebarOpen ? 'w-72' : 'w-16'} group transition-all duration-300 ease-in-out border-r border-gray-100 dark:border-gray-800 bg-[#f9f9f9] dark:bg-[#121212] flex flex-col shrink-0 z-40 relative`}>
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800">
           
@@ -400,7 +408,7 @@ const handleSend = async (e) => {
           )}
         </div>
         
-        {/* Кнопка "Новий чат" */}
+        {/* New Chat Button */}
         <div className={`p-4 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>
           <button onClick={handleNewChat} className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#18181b] dark:bg-white text-white dark:text-black text-[13px] font-semibold rounded-xl hover:bg-black dark:hover:bg-gray-200 transition-colors shadow-sm">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -408,7 +416,7 @@ const handleSend = async (e) => {
           </button>
         </div>
 
-        {/* Список сесій */}
+        {/* Sessions List */}
         <div className={`flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-2 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {sortedSessions.map(session => (
             <div 
@@ -424,14 +432,14 @@ const handleSend = async (e) => {
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
-                  {/* Іконка закріплення */}
+                  {/* Pin Icon */}
                   {session.isPinned && (
                     <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
                     </svg>
                   )}
                   
-                  {/* Логіка Перейменування */}
+                  {/* Renaming Logic */}
                   {editingId === session.id ? (
                     <input
                       type="text"
@@ -452,7 +460,7 @@ const handleSend = async (e) => {
                 </div>
               </div>
 
-              {/* Кнопка трьох крапок */}
+              {/* Options Button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -469,7 +477,7 @@ const handleSend = async (e) => {
                 </svg>
               </button>
 
-              {/* Випадаюче меню (з правильним Z-Index та Overlay) */}
+              {/* Dropdown Menu with Overlay */}
               {openMenuId === session.id && (
                 <>
                   <div 
@@ -517,12 +525,12 @@ const handleSend = async (e) => {
         </div>
       </div>
 
-      {/* ГОЛОВНА ЗОНА ЧАТУ */}
+      {/* MAIN CHAT AREA */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white dark:bg-[#0a0a0a] relative transition-colors duration-300">
         
         <div className="h-16 border-b border-gray-100 dark:border-gray-800 px-8 flex justify-between items-center bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-sm z-10 transition-colors">
           
-          {/* Виклик нашого кастомного меню моделі */}
+          {/* Custom Model Selector */}
           <ModelSelect selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
           
           <button 
