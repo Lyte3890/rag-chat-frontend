@@ -231,35 +231,64 @@ function App() {
     }
   }, [input]);
 
-  const handleSend = (e) => {
+const handleSend = async (e) => {
     if (e) e.preventDefault();
     if (!input.trim() && !attachedFile) return;
 
+    // Зберігаємо значення, щоб очистити UI миттєво
+    const userText = input.trim();
+    const fileToSend = attachedFile;
     const newMessages = [...activeSession.messages];
     
-    if (attachedFile) {
-      newMessages.push({ role: 'system', text: `📄 Uploaded document: "${attachedFile.name}" for vectorization.` });
+    if (fileToSend) {
+      newMessages.push({ role: 'system', text: `📄 Uploading & Processing: "${fileToSend.name}"...` });
     }
-    if (input.trim()) {
-      newMessages.push({ role: 'user', text: input.trim() });
+    if (userText) {
+      newMessages.push({ role: 'user', text: userText });
     }
 
+    // Оновлюємо UI (показуємо повідомлення користувача)
     updateActiveSessionMessages(newMessages);
     setInput('');
     setAttachedFile(null);
 
-    setTimeout(() => {
+    try {
+      // 1. Формуємо пакет даних (Текст + Файл)
+      const formData = new FormData();
+      if (userText) formData.append('query', userText);
+      if (fileToSend) formData.append('file', fileToSend);
+
+      // 2. Робимо реальний запит на бекенд (звертаємось до змінної оточення)
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        body: formData,
+        // Браузер сам встановить правильні заголовки multipart/form-data для файлу
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // 3. Отримуємо відповідь від FastAPI
+      const data = await response.json();
+
+      // 4. Додаємо відповідь бота в інтерфейс
       updateActiveSessionMessages([
         ...newMessages, 
         { 
           role: 'assistant', 
-          text: attachedFile 
-            ? `Successfully parsed and embedded "${attachedFile.name}" into the vector database.` 
-            : `Based on the latest data pipeline query, your request has been processed.`,
-          sources: attachedFile ? [] : [{ doc: 'System_Architecture.pdf', page: 7 }]
+          text: data.text || "No text received.",
+          sources: data.sources || [] 
         }
       ]);
-    }, 1500);
+
+    } catch (error) {
+      console.error("Fetch error:", error);
+      updateActiveSessionMessages([
+        ...newMessages, 
+        { role: 'system', text: `❌ Error connecting to RAG backend: ${error.message}` }
+      ]);
+    }
   };
 
   const handleFileSelect = (e) => {
