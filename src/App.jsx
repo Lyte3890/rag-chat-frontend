@@ -5,9 +5,9 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const models = [
-    { id: 'llama3-70b-8192', name: 'Llama 3 (70B)', desc: 'Advanced reasoning' },
-    { id: 'llama3-8b-8192', name: 'Llama 3 (8B)', desc: 'Fast responses' },
+const models = [
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 (70B)', desc: 'Advanced reasoning' },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 (8B)', desc: 'Fast responses' },
     { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Large context' }
   ];
 
@@ -181,7 +181,8 @@ function App() {
   const [input, setInput] = useState('');
   
   // Model selection state
-  const [selectedModel, setSelectedModel] = useState('llama3-70b-8192');
+  // Стан для вибору моделі
+  const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
   
   // Session menu and renaming state
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -343,6 +344,9 @@ const handleSend = async (e) => {
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
+      }if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
 
       // 3. Parse FastAPI response
