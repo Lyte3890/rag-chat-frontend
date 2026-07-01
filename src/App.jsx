@@ -1,5 +1,62 @@
 import { useState, useRef, useEffect } from 'react';
 
+// === КАСТОМНЕ МЕНЮ ВИБОРУ МОДЕЛІ ===
+function ModelSelect({ selectedModel, setSelectedModel }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  const models = [
+    { id: 'llama3-70b-8192', name: 'Llama 3 (70B)', desc: 'Advanced reasoning' },
+    { id: 'llama3-8b-8192', name: 'Llama 3 (8B)', desc: 'Fast responses' },
+    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Large context' }
+  ];
+
+  // Закриття меню при кліку поза ним
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const currentModel = models.find(m => m.id === selectedModel);
+
+  return (
+    <div className="relative z-50" ref={menuRef}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-1.5 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-full text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#27272a] transition-all shadow-sm"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+          <span>{currentModel?.name}</span>
+        </div>
+        <svg className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      <div 
+        className={`absolute right-0 top-[calc(100%+8px)] w-56 bg-white dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 origin-top-right ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}`}
+      >
+        <div className="p-1.5">
+          {models.map(model => (
+            <button
+              key={model.id}
+              onClick={() => { setSelectedModel(model.id); setIsOpen(false); }}
+              className={`w-full text-left px-3 py-2.5 rounded-xl flex flex-col transition-colors ${selectedModel === model.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-[#27272a] text-gray-700 dark:text-gray-300'}`}
+            >
+              <span className="text-[13px] font-semibold">{model.name}</span>
+              <span className={`text-[11px] ${selectedModel === model.id ? 'text-blue-500/70 dark:text-blue-400/70' : 'text-gray-400'}`}>{model.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // === КОМПОНЕНТ ПОВІДОМЛЕННЯ (з ідеальною анімацією) ===
 function ChatMessage({ msg }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -46,18 +103,23 @@ function ChatMessage({ msg }) {
         </div>
         {msg.sources && msg.sources.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-1">
-            {msg.sources.map((src, i) => (
-              <a 
-                key={i} 
-                href={`${import.meta.env.VITE_API_BASE_URL}/docs/${src.doc}#page=${src.page}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 rounded-lg text-[11px] font-mono cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors no-underline"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                {src.doc} <span className="opacity-40">|</span> p.{src.page}
-              </a>
-            ))}
+            {msg.sources.map((src, i) => {
+              // Універсальна перевірка ключа для імені документа
+              const docName = src.document_name || src.source || src.doc || 'document.pdf';
+              
+              return (
+                <a 
+                  key={i} 
+                  href={`${import.meta.env.VITE_API_BASE_URL}/docs/${docName}#page=${src.page}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 rounded-lg text-[11px] font-mono cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors no-underline hover:-translate-y-0.5 shadow-sm hover:shadow"
+                >
+                  <svg className="w-3 h-3 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <span className="truncate max-w-[150px]">{docName}</span> <span className="opacity-40">|</span> p.{src.page}
+                </a>
+              );
+            })}
           </div>
         )}
       </div>
@@ -272,7 +334,6 @@ const handleSend = async (e) => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat`, {
         method: 'POST',
         body: formData,
-        // Браузер сам встановить правильні заголовки multipart/form-data для файлу
       });
 
       if (!response.ok) {
@@ -464,19 +525,8 @@ const handleSend = async (e) => {
         
         <div className="h-16 border-b border-gray-100 dark:border-gray-800 px-8 flex justify-between items-center bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-sm z-10 transition-colors">
           
-          {/* Випадаюче меню вибору моделі */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Model:</span>
-            <select 
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="bg-transparent border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 cursor-pointer"
-            >
-              <option value="llama3-70b-8192">Llama 3 (70B) - Advanced</option>
-              <option value="llama3-8b-8192">Llama 3 (8B) - Fast</option>
-              <option value="mixtral-8x7b-32768">Mixtral 8x7B - Large Context</option>
-            </select>
-          </div>
+          {/* Виклик нашого кастомного меню моделі */}
+          <ModelSelect selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
           
           <button 
             onClick={() => setIsDark(!isDark)}
