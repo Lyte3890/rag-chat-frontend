@@ -5,13 +5,13 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
+  // Використовуємо тільки моделі, які фізично підтримує Groq
   const models = [
     { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 (70B)', desc: 'Advanced reasoning' },
     { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 (8B)', desc: 'Fast responses' },
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS (120B)', desc: 'Massive scale' }
+    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Large context' }
   ];
 
-  // Close menu when clicking outside the component
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -68,7 +68,6 @@ function ChatMessage({ msg }) {
   
   const textRef = useRef(null);
 
-  // Check if text exceeds height threshold to apply clamping
   useEffect(() => {
     if (textRef.current && msg.role === 'user') {
       if (textRef.current.scrollHeight > 140) {
@@ -106,10 +105,8 @@ function ChatMessage({ msg }) {
         {msg.sources && msg.sources.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-1">
             {msg.sources.map((src, i) => {
-              // Extract filename, removing potential absolute paths
               let rawDocName = src.document_name || src.source || src.doc || 'document.pdf';
               let cleanDocName = rawDocName.split('/').pop().split('\\').pop();
-              // Encode filename for URL to properly handle spaces and Cyrillic characters
               let encodedDocName = encodeURIComponent(cleanDocName);
               
               return (
@@ -180,11 +177,8 @@ function App() {
   const [attachedFile, setAttachedFile] = useState(null);
   const [input, setInput] = useState('');
   
-  // Model selection state
-  // Стан для вибору моделі
   const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
   
-  // Session menu and renaming state
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -255,7 +249,6 @@ function App() {
     setInput('');
   };
 
-  // MENU FUNCTIONS
   const togglePin = (e, id) => {
     e.stopPropagation();
     setSessions(prev => prev.map(s => s.id === id ? { ...s, isPinned: !s.isPinned } : s));
@@ -293,7 +286,6 @@ function App() {
     setEditingId(null);
   };
 
-  // Input handling
   const handleInput = (e) => {
     setInput(e.target.value);
     if (textareaRef.current) {
@@ -312,7 +304,6 @@ const handleSend = async (e) => {
     if (e) e.preventDefault();
     if (!input.trim() && !attachedFile) return;
 
-    // Cache values to clear UI instantly
     const userText = input.trim();
     const fileToSend = attachedFile;
     const newMessages = [...activeSession.messages];
@@ -324,35 +315,29 @@ const handleSend = async (e) => {
       newMessages.push({ role: 'user', text: userText });
     }
 
-    // Update UI to show user message
     updateActiveSessionMessages(newMessages);
     setInput('');
     setAttachedFile(null);
 
     try {
-      // 1. Prepare form data payload (Text + File + Model)
       const formData = new FormData();
       if (userText) formData.append('query', userText);
       if (fileToSend) formData.append('file', fileToSend);
-      formData.append('model', selectedModel); // Append selected model
+      formData.append('model', selectedModel);
 
-      // 2. Execute backend request using environment variable
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat`, {
         method: 'POST',
         body: formData,
       });
 
+      // Звідси прибрано дублікат коду
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
 
-      // 3. Parse FastAPI response
       const data = await response.json();
 
-      // 4. Append assistant response to UI
       updateActiveSessionMessages([
         ...newMessages, 
         { 
