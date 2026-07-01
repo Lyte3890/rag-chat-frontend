@@ -47,10 +47,16 @@ function ChatMessage({ msg }) {
         {msg.sources && msg.sources.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-1">
             {msg.sources.map((src, i) => (
-              <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 rounded-lg text-[11px] font-mono cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <a 
+                key={i} 
+                href={`${import.meta.env.VITE_API_BASE_URL}/docs/${src.doc}#page=${src.page}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 rounded-lg text-[11px] font-mono cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors no-underline"
+              >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 {src.doc} <span className="opacity-40">|</span> p.{src.page}
-              </div>
+              </a>
             ))}
           </div>
         )}
@@ -106,6 +112,9 @@ function App() {
   const textareaRef = useRef(null);
   const [attachedFile, setAttachedFile] = useState(null);
   const [input, setInput] = useState('');
+  
+  // Стан для вибору моделі
+  const [selectedModel, setSelectedModel] = useState('llama3-70b-8192');
   
   // Стан для меню і перейменування
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -253,10 +262,11 @@ const handleSend = async (e) => {
     setAttachedFile(null);
 
     try {
-      // 1. Формуємо пакет даних (Текст + Файл)
+      // 1. Формуємо пакет даних (Текст + Файл + Модель)
       const formData = new FormData();
       if (userText) formData.append('query', userText);
       if (fileToSend) formData.append('file', fileToSend);
+      formData.append('model', selectedModel); // Передаємо вибрану модель
 
       // 2. Робимо реальний запит на бекенд (звертаємось до змінної оточення)
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat`, {
@@ -305,7 +315,9 @@ const handleSend = async (e) => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800">
           
           <div className={`overflow-hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-            <h2 className="font-bold text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">History</h2>
+            <h1 className="font-extrabold tracking-tight text-[13.5px] text-gray-900 dark:text-white whitespace-nowrap ml-2">
+              Engineering RAG <span className="font-light text-gray-400 dark:text-gray-500">Copilot</span>
+            </h1>
           </div>
 
           {isSidebarOpen ? (
@@ -451,9 +463,20 @@ const handleSend = async (e) => {
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white dark:bg-[#0a0a0a] relative transition-colors duration-300">
         
         <div className="h-16 border-b border-gray-100 dark:border-gray-800 px-8 flex justify-between items-center bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-sm z-10 transition-colors">
-          <h1 className="font-extrabold tracking-tight text-lg text-gray-900 dark:text-white">
-            Engineering RAG <span className="font-light text-gray-400 dark:text-gray-500">Copilot</span>
-          </h1>
+          
+          {/* Випадаюче меню вибору моделі */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Model:</span>
+            <select 
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="bg-transparent border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 cursor-pointer"
+            >
+              <option value="llama3-70b-8192">Llama 3 (70B) - Advanced</option>
+              <option value="llama3-8b-8192">Llama 3 (8B) - Fast</option>
+              <option value="mixtral-8x7b-32768">Mixtral 8x7B - Large Context</option>
+            </select>
+          </div>
           
           <button 
             onClick={() => setIsDark(!isDark)}
