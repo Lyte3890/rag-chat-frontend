@@ -5,11 +5,14 @@ function ModelSelect({ selectedModel, setSelectedModel }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
-const models = [
+// Оновлений масив моделей
+  const models = [
     { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 (70B)', desc: 'Advanced reasoning' },
     { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 (8B)', desc: 'Fast responses' },
-    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Large context' }
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS (120B)', desc: 'Massive scale' }
   ];
+  
+  const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
 
   // Close menu when clicking outside the component
   useEffect(() => {
